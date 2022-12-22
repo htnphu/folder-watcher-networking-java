@@ -9,7 +9,7 @@ import javax.swing.table.DefaultTableModel;
 
 public class Server extends JFrame {
     private final JTextArea bottomClientChangeLog = new JTextArea();
-    private final String[] columns = {"Client", "Change", "Change on"};
+    private final String[] columns = { "Client", "Change", "Change on" };
     private final DefaultTableModel defaultTableModel = new DefaultTableModel(columns, 0);
     private final JTextField clientTextField = new JTextField(50);
     private final JTextField directoryTextField = new JTextField(50);
@@ -29,7 +29,7 @@ public class Server extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JPanel topPanel = new JPanel();
-        topPanel.setLayout(new GridLayout(3,1));
+        topPanel.setLayout(new GridLayout(3, 1));
 
         JPanel clientPanel = new JPanel();
         JLabel clientNameLabel = new JLabel("Client");
@@ -52,37 +52,37 @@ public class Server extends JFrame {
         topPanel.add(directoryPanel);
         topPanel.add(watchButton);
 
-//        GridBagLayout gridBagLayout = new GridBagLayout();
-//        GridBagConstraints gridBagConstraints = new GridBagConstraints();
-//        topPanel.setLayout(gridBagLayout);
-//
-//        JPanel line1Panel = new JPanel();
-//        line1Panel.add(clientNameLabel);
-//        line1Panel.add(clientTextField);
-//
-//        gridBagConstraints.gridx = 0;
-//        gridBagConstraints.gridy = 0;
-//
-//        JPanel line2Panel = new JPanel();
-//        JLabel directoryLabel = new JLabel("Directory");
-//        line2Panel.add(directoryLabel);
-//        line2Panel.add(directoryTextField);
-//
-//        gridBagConstraints.gridx = 1;
-//        gridBagConstraints.gridy = 1;
-//
-//        JPanel line3Panel = new JPanel();
-//        JButton watchButton = new JButton("Watch");
-//        watchButton.setFocusable(false);
-//        // create listener on the "watch" button
-//        watchButton.addActionListener(new watchEventActionListener());
-//
-//        line3Panel.add(watchButton);
-//        gridBagConstraints.gridx = 0;
-//
-//        topPanel.add((line1Panel));
-//        topPanel.add(line2Panel);
-//        topPanel.add(line3Panel);
+        // GridBagLayout gridBagLayout = new GridBagLayout();
+        // GridBagConstraints gridBagConstraints = new GridBagConstraints();
+        // topPanel.setLayout(gridBagLayout);
+        //
+        // JPanel line1Panel = new JPanel();
+        // line1Panel.add(clientNameLabel);
+        // line1Panel.add(clientTextField);
+        //
+        // gridBagConstraints.gridx = 0;
+        // gridBagConstraints.gridy = 0;
+        //
+        // JPanel line2Panel = new JPanel();
+        // JLabel directoryLabel = new JLabel("Directory");
+        // line2Panel.add(directoryLabel);
+        // line2Panel.add(directoryTextField);
+        //
+        // gridBagConstraints.gridx = 1;
+        // gridBagConstraints.gridy = 1;
+        //
+        // JPanel line3Panel = new JPanel();
+        // JButton watchButton = new JButton("Watch");
+        // watchButton.setFocusable(false);
+        // // create listener on the "watch" button
+        // watchButton.addActionListener(new watchEventActionListener());
+        //
+        // line3Panel.add(watchButton);
+        // gridBagConstraints.gridx = 0;
+        //
+        // topPanel.add((line1Panel));
+        // topPanel.add(line2Panel);
+        // topPanel.add(line3Panel);
 
         JTable table = new JTable(defaultTableModel);
         table.setEnabled(false);
@@ -104,7 +104,8 @@ public class Server extends JFrame {
 
         try {
             // Reference: Mr. Nguyen Van Khiet - Java Networking
-            @SuppressWarnings("resource") ServerSocket serverSocket = new ServerSocket(3200);
+            @SuppressWarnings("resource")
+            ServerSocket serverSocket = new ServerSocket(3200);
             bottomClientChangeLog.append("Started server: " + new Date() + "\n");
             while (true) {
                 Socket s = serverSocket.accept();
@@ -124,20 +125,21 @@ public class Server extends JFrame {
         }
     }
 
-//    public void watchButtonHandler(ActionEvent e) {
-//        try {
-//            String clientName = clientTextField.getText();
-//            String directoryName = directoryTextField.getText();
-//            dos.writeUTF(clientName);
-//            dosClient.writeUTF(directoryName);
-//            String newMessage = "Watching the folder: " + directoryName + " of Client: " + clientName + "!";
-//            JOptionPane.showMessageDialog(null, newMessage);
-//            clientTextField.setText("");
-//            directoryTextField.setText("");
-//        } catch (IOException ex) {
-//            ex.printStackTrace();
-//        }
-//    }
+    // public void watchButtonHandler(ActionEvent e) {
+    // try {
+    // String clientName = clientTextField.getText();
+    // String directoryName = directoryTextField.getText();
+    // dos.writeUTF(clientName);
+    // dosClient.writeUTF(directoryName);
+    // String newMessage = "Watching the folder: " + directoryName + " of Client: "
+    // + clientName + "!";
+    // JOptionPane.showMessageDialog(null, newMessage);
+    // clientTextField.setText("");
+    // directoryTextField.setText("");
+    // } catch (IOException ex) {
+    // ex.printStackTrace();
+    // }
+    // }
 
     private class watchEventActionListener implements ActionListener {
         public void actionPerformed(ActionEvent e) {
@@ -146,10 +148,11 @@ public class Server extends JFrame {
                 String directoryName = directoryTextField.getText();
                 dos.writeUTF(clientName);
                 dosClient.writeUTF(directoryName);
-//                String newMessage = "Watching the folder: " + directoryName + " of Client: " + clientName + "!";
-//                JOptionPane.showMessageDialog(null, newMessage);
-//                clientTextField.setText("");
-//                directoryTextField.setText("");
+                // String newMessage = "Watching the folder: " + directoryName + " of Client: "
+                // + clientName + "!";
+                // JOptionPane.showMessageDialog(null, newMessage);
+                // clientTextField.setText("");
+                // directoryTextField.setText("");
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -158,6 +161,7 @@ public class Server extends JFrame {
 
     class ClientThreadHandling implements Runnable {
         private final Socket s;
+
         public ClientThreadHandling(Socket socket) {
             this.s = socket;
         }
@@ -170,7 +174,7 @@ public class Server extends JFrame {
                 while (true) {
                     String changeMessage = dis.readUTF();
                     String[] message = changeMessage.split("~");
-                    defaultTableModel.insertRow(0, new Object[]{s.getPort(), message[0], message[1]});
+                    defaultTableModel.insertRow(0, new Object[] { s.getPort(), message[0], message[1] });
                 }
             } catch (IOException e) {
                 bottomClientChangeLog.append(s.getPort() + " disconnected.\n");
