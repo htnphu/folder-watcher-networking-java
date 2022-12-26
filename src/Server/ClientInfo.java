@@ -9,7 +9,7 @@ import java.net.Socket;
 import java.util.LinkedList;
 
 public class ClientInfo {
-  private Socket mySocket;
+  public Socket mySocket;
 
   private BufferedReader reader;
   private BufferedWriter writer;

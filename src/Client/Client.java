@@ -1,122 +1,115 @@
 package Client;
-import java.io.*;
-import java.util.*;
-import java.net.*;
-import java.nio.file.*;
-import java.nio.file.attribute.*;
 
-/**
- * WATCH SERVICE API
- * REFERENCE:
- * https://gpcoder.com/4156-gioi-thieu-watchservice-api-trong-java/
- * https://docs.oracle.com/javase/7/docs/api/java/nio/file/WatchService.html
- */
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.LinkedList;
 
 public class Client {
-	private final WatchService watchService;
-	private final Map<WatchKey, Path> watchKey;
+  BufferedWriter writer;
+  BufferedReader reader;
+  Socket mySocket;
 
-	public static void main(String[] args) throws IOException {
-		new Client();
-	}
+  LinkedList<FileInfo> fileInfoList = new LinkedList<FileInfo>();
+  LinkedList<String> cmdQueue = new LinkedList<String>();
+  LinkedList<String> msgQueue = new LinkedList<String>();
 
-	public Client() throws IOException {
-		Path dir;
-		this.watchKey = new HashMap<>();
-		this.watchService = FileSystems.getDefault().newWatchService();
-		try {
-			while (true) {
-				{
-					// Reference: Mr. Nguyen Van Khiet - Java Networking
-					Socket s = new Socket("localhost", 3200);
-					DataInputStream disServer = new DataInputStream(s.getInputStream());
-					DataInputStream disID = new DataInputStream(s.getInputStream());
-					String clientID = disID.readUTF();
-					String directory = disServer.readUTF();
-					System.out.println(clientID);
-					System.out.println(directory);
-					dir = Paths.get(directory);
-					walkFileTree(dir);
+  int errorCount = 0;
 
-					// Handling event, takes s <-> socket as param
-					eventHandler(s);
-				}
-			}
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		}
-	}
+  public static void main(String[] args) {
+    try {
+      Client client = new Client();
+    } catch (UnknownHostException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
-	private void eventHandler(Socket s) {
-		try {
-			DataOutputStream dos = new DataOutputStream(s.getOutputStream());
-			while (true) {
-				WatchKey wk;
-				try {
-					wk = watchService.take();
-				} catch (InterruptedException iex) {
-					return;
-				}
+  public Client() throws UnknownHostException, IOException {
+    try (
+        Socket s = new Socket("localhost", 8880);
+        BufferedWriter buffWriter = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+        BufferedReader buffReader = new BufferedReader(new InputStreamReader(s.getInputStream()))) {
 
-				Path dir = watchKey.get(wk);
-				if (dir == null) {
-					System.err.println("Failed due to watcherKey");
-					continue;
-				}
+      writer = buffWriter;
+      reader = buffReader;
+      mySocket = s;
 
-				for (WatchEvent<?> event : wk.pollEvents()) {
-					@SuppressWarnings("rawtypes")
-					WatchEvent.Kind kind = event.kind();
-					@SuppressWarnings("unchecked")
-					Path name = ((WatchEvent<Path>) event).context();
-					Path childItems = dir.resolve(name);
-					System.out.format("%s: %s\n", event.kind().name(), childItems);
-					dos.writeUTF(event.kind().name() + "~" + childItems);
-					dos.flush();
-					if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
-						try {
-							if (Files.isDirectory(childItems)) {
-								walkFileTree(childItems);
-							}
-						} catch (IOException ioException) {
-							ioException.printStackTrace();
-						}
-					}
-				}
-				boolean isValid = wk.reset();
-				if (!isValid) {
-					watchKey.remove(wk);
-					if (watchKey.isEmpty()) {
-						break;
-					}
-				}
-			}
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		}
-	}
+      Thread listen = new Thread(new ListenMsg());
+      Thread watch = new Thread(new WatchFileChange());
 
-	private void regDir(Path dir) throws IOException {
-		/**
-		 * ENTRY_MODIFY: CHANGE ON DIRECTORY
-		 * ENTRY_DELETE: DELETE FILES/FOLDERS ON DIRECTORY
-		 * ENTRY_CREATE: CREATE FILES/FOLDERS ON DIRECTORY
-		 */
-		WatchKey key = dir.register(watchService,
-				StandardWatchEventKinds.ENTRY_MODIFY,
-				StandardWatchEventKinds.ENTRY_DELETE,
-				StandardWatchEventKinds.ENTRY_CREATE);
-		watchKey.put(key, dir);
-	}
+      listen.start();
+      watch.start();
 
-	private void walkFileTree(final Path start) throws IOException {
-		Files.walkFileTree(start, new SimpleFileVisitor<>() {
-			@Override
-			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-				// registry directory
-				regDir(dir);
-				return FileVisitResult.CONTINUE;
-			}
-		});
-	}
+      while (mySocket.isConnected() && errorCount <= 10) {
+        try {
+          String msg = msgQueue.pop();
+          WriteMsg(msg);
+        } catch (Exception e) {
+          // TODO: handle exception
+        }        
+      }
+    }
+
+  }
+
+  private void addFileToWatch(String path) {
+    fileInfoList.add(new FileInfo(path));
+  }
+
+  private void WriteMsg(String msg) {
+    try {
+      this.writer.write(msg);
+      this.writer.newLine();
+      this.writer.flush();
+    } catch (Exception e) {
+      errorCount += 1;
+    }
+  }
+
+  private class WatchFileChange implements Runnable {
+    @Override
+    public void run() {
+
+      while (mySocket.isConnected() && errorCount <= 10) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+          errorCount += 1;
+        }
+
+        for (int i = 0; i < fileInfoList.size(); i++) {
+          boolean changed = fileInfoList.get(i).hasChanged();
+          if (changed) {
+            msgQueue.add(fileInfoList.get(i).changeMsg());
+          }
+        }
+
+      }
+    }
+
+  }
+
+  private class ListenMsg implements Runnable {
+    @Override
+    public void run() {
+      while (mySocket.isConnected() && errorCount <= 10) {
+        try {
+          String msg = reader.readLine();
+          System.out.println(msg);
+          addFileToWatch(msg); // Đây là do tôi giả sử mọi msg từ server là để watch file
+        } catch (IOException e) {
+          e.printStackTrace();
+          errorCount += 1;
+        }
+      }
+    }
+  }
+
 }
